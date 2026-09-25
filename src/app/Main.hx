@@ -22,6 +22,15 @@ import wisdom.X;
  */
 class Main implements X {
 
+    static final AUTHOR_URL = 'https://bsky.app/profile/jeremyfa.bsky.social';
+
+    static function openAuthor(e:js.html.Event):Void {
+
+        e.preventDefault();
+        Platform.openUrl(AUTHOR_URL, _ -> {});
+
+    }
+
     static function main():Void {
 
         final model = new AppModel();
@@ -109,7 +118,17 @@ class Main implements X {
                         </div>
                     </div>
 
-                    <StatusBar />
+                    // The credit, on the right of the status bar. The link opens
+                    // through the platform, so the desktop app sends it to the
+                    // browser instead of loading it in its own window.
+                    <StatusBar>
+                        <span class="shrink-0 [text-box:trim-both_ex_alphabetic]">
+                            Created by
+                            // The markup drops the space before a tag: the margin puts it back.
+                            <a href=${AUTHOR_URL} class="ml-[0.25em] text-t-text hover:underline"
+                               onclick=${(e) -> openAuthor(e)}>Jérémy Faivre</a>
+                        </span>
+                    </StatusBar>
 
                     // Always mounted, hidden when there is nothing to show: a
                     // stable child count keeps wisdom matching nodes correctly
