@@ -1,0 +1,3 @@
+[submodule "lib/wisdom-kit"]
+	path = lib/wisdom-kit
+	url = git@github.com:jeremyfa/wisdom-kit.git

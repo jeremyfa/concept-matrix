@@ -1,0 +1,307 @@
+@import "tailwindcss";
+
+/* Theme tokens, the base layer and the scrollbars come from the kit. */
+@import "../lib/wisdom-kit/kit.css";
+
+/*
+ * Where Tailwind looks for class names. Its extractor is a regex over source
+ * text, so it finds them inside wisdom's '<> … ' markup strings like anywhere
+ * else. But a class assembled by concatenation produces nothing, so always write
+ * whole literal class strings.
+ *
+ * These paths are relative to THIS file, which is why the kit cannot declare
+ * its own: it does not know where a project mounted it.
+ */
+@source "../lib/wisdom-kit/src/kit";
+@source "../lib/wisdom-kit/web";
+@source "./app";
+@source "../web";
+
+/*
+ * How much of its colour a note fills with (NoteColors noteTint), and how
+ * much its border and its band in a grid cell show (cellTint). The note is a
+ * faint tint, its frame carries the colour. The dark surface takes more of
+ * each: what reads well on white looks dull on it. The kit sets data-theme
+ * on the root.
+ */
+:root {
+    --note-card-mix: 14%;
+    --note-cell-mix: 65%;
+}
+
+:root[data-theme="dark"] {
+    --note-card-mix: 18%;
+    --note-cell-mix: 100%;
+}
+
+/*
+ * The concept matrix. Column headers slant 30° from vertical. Their height,
+ * the table's right margin and the labels' max width depend on the concept
+ * labels, so they are computed with MatrixLayoutUtils and set inline.
+ */
+
+@utility matrix-table {
+    @apply border-separate border-spacing-0;
+}
+
+/* A column header: an empty box holding a matrix-slant and a matrix-label. */
+@utility matrix-head {
+    @apply relative p-0 w-10 min-w-10 align-bottom;
+}
+
+/* The header's frame, skewed from its bottom edge so the slanted sides start
+   exactly on the column lines. It starts 1px left and overlaps its neighbour
+   instead of doubling the line. No bottom side: the first data row closes the
+   joint with a border-t. */
+@utility matrix-slant-base {
+    @apply absolute bottom-0 -left-px w-[calc(100%+1px)] h-full border border-b-0 border-t-border
+           origin-bottom-left -skew-x-30;
+}
+
+@utility matrix-slant {
+    @apply matrix-slant-base bg-t-surface-2;
+}
+
+/* The header of the selected cell column, like matrix-rowhead-selected. */
+@utility matrix-slant-selected {
+    @apply matrix-slant-base bg-[color-mix(in_oklab,var(--t-text)_10%,var(--t-surface-2))];
+}
+
+/* Only rotated, never skewed, so the text is not distorted. It pivots on the
+   middle of the column and runs along the centre of the slanted band. */
+@utility matrix-label-base {
+    @apply absolute left-1/2 bottom-0 pl-3.5 leading-4 text-[12px] font-medium
+           truncate origin-left translate-y-1/2 -rotate-60;
+}
+
+@utility matrix-label {
+    @apply matrix-label-base text-t-text/85;
+}
+
+@utility matrix-label-selected {
+    @apply matrix-label-base matrix-bold;
+}
+
+/* Bolder without being wider: a thin outline thickens the glyphs but keeps
+   their advance widths, where a heavier font-weight would widen the text and
+   shift the layout. */
+@utility matrix-bold {
+    @apply text-t-text [-webkit-text-stroke:0.35px_currentColor];
+}
+
+/* Sticks next to matrix-gutter, which is w-6. Holds a matrix-name. */
+@utility matrix-rowhead-base {
+    @apply sticky left-6 z-1 px-3 py-0 text-right border-x border-b border-t-border focus-within:bg-t-surface;
+}
+
+@utility matrix-rowhead {
+    @apply matrix-rowhead-base bg-t-surface-2;
+}
+
+/* The header of the selected cell row: the header surface, lifted a little
+   with the text colour, the same way in both themes. */
+@utility matrix-rowhead-selected {
+    @apply matrix-rowhead-base bg-[color-mix(in_oklab,var(--t-text)_10%,var(--t-surface-2))];
+}
+
+/* The concept name, always editable: an input styled as the header text. Its
+   width is set inline to the longest name, capped at MatrixLayoutUtils.MAX_TEXT. */
+@utility matrix-name-base {
+    @apply block p-0 bg-transparent border-0 outline-none text-right text-ellipsis text-[12px] font-medium cursor-text;
+}
+
+@utility matrix-name {
+    @apply matrix-name-base text-t-text/85 focus:text-t-text;
+}
+
+@utility matrix-name-selected {
+    @apply matrix-name-base matrix-bold;
+}
+
+/* The column left of the table holding the move controls. No border and the
+   page background, so it reads as outside the grid. */
+@utility matrix-gutter {
+    @apply sticky left-0 z-1 p-0 w-6 min-w-6 bg-t-background;
+}
+
+/* The up/down pair: hidden until the row's name is hovered or edited, and
+   kept visible while the pointer is on the controls themselves. The row
+   carries the `group` class. */
+@utility matrix-moves {
+    @apply flex flex-col items-center opacity-0 transition-opacity duration-75
+           group-has-[th:hover]:opacity-100 group-focus-within:opacity-100 hover:opacity-100;
+}
+
+/* A bare icon button, grey on the page background. Disabled means there is
+   nothing to do, so it disappears rather than greys out. */
+@utility matrix-icon-button {
+    @apply inline-flex items-center justify-center w-6 h-5 text-t-text-muted hover:text-t-text
+           cursor-pointer disabled:invisible;
+}
+
+/* Under the names column, aligned with their right edge. Hidden until a name
+   is hovered, and kept visible while the pointer is on it. The table carries
+   the named group `group/matrix`: it is named so it does not also trigger the
+   rows' own `group` variants in matrix-moves. */
+@utility matrix-add {
+    @apply p-0 pt-1 pr-2 text-right opacity-0 transition-opacity duration-75
+           group-has-[.matrix-rowhead:hover]/matrix:opacity-100 hover:opacity-100;
+}
+
+@utility matrix-cell-base {
+    @apply p-0 w-10 min-w-10 h-10 border-r border-b border-t-border;
+}
+
+/* Hover and selection only lay neutral layers over a cell, never replace its
+   background: a coloured cell gets its colours inline, and a filter would also
+   fade its borders. The hover is an inset shadow, which paints inside the
+   borders and over the background, in the text colour so it shows in both
+   themes. */
+@utility matrix-cell {
+    @apply matrix-cell-base bg-t-surface cursor-pointer transition-shadow duration-75
+           hover:shadow-[inset_0_0_0_40px_color-mix(in_srgb,var(--t-text)_10%,transparent)];
+}
+
+/* The cell whose notes are open in the panel. */
+@utility matrix-selected {
+    @apply outline-2 outline-t-text/30 -outline-offset-2;
+}
+
+/* The row and column of the selected cell: a lighter version of the hover
+   layer. A cell's colours use its background image, so this is a shadow too;
+   hovering a cell of the cross shows the stronger hover layer instead. */
+@utility matrix-cross {
+    @apply shadow-[inset_0_0_0_40px_color-mix(in_srgb,var(--t-text)_6%,transparent)];
+}
+
+/* A concept against itself: hatched, not interactive. */
+@utility matrix-self {
+    @apply matrix-cell-base bg-[repeating-linear-gradient(-45deg,var(--t-surface)_0_4px,var(--t-border)_4px_5px)];
+}
+
+/*
+ * The notes panel, right of the grid, for the selected cell.
+ */
+
+/* Its width is set inline, from model.ui.notePanelWidth. The max width keeps
+   the grid visible when the window shrinks below what was dragged. */
+@utility note-panel {
+    @apply relative shrink-0 max-w-[calc(100%-320px)] flex flex-col min-h-0 border-l border-t-border bg-t-surface;
+}
+
+/* The grip over the left border. The markup adds `group/splitter`. */
+@utility note-splitter {
+    @apply absolute top-0 bottom-0 -left-[5px] w-[9px] z-10 flex justify-center cursor-col-resize;
+}
+
+@utility note-splitter-line {
+    @apply w-0 transition-all duration-75 group-hover/splitter:w-[3px] group-hover/splitter:bg-t-border-strong;
+}
+
+@utility note-splitter-line-active {
+    @apply w-[3px] bg-t-accent;
+}
+
+/* Wraps instead of being cut. Its padding centres the first line on the
+   close button beside it. */
+@utility note-panel-title {
+    @apply flex-1 min-w-0 py-1.5 break-words text-[14px] leading-5 font-semibold text-t-text;
+}
+
+/* A note and its move controls. The markup adds `group` next to it, so the
+   controls, the trash and the colour dot show while the note is hovered or
+   edited. */
+@utility note-row {
+    @apply relative;
+}
+
+/* The move controls, in the 12px margin left of the note. */
+@utility note-moves {
+    @apply absolute -left-3 top-1 flex flex-col items-center w-3;
+}
+
+/* The + under the notes, shown only while the pointer is over the panel. The
+   negative margin lines its glyph up with the left edge of the notes. */
+@utility note-add {
+    @apply -ml-[5px] opacity-0 transition-opacity duration-75 group-hover/panel:opacity-100;
+}
+
+/* Like matrix-icon-button, only as wide as its icon, so it fits the margins
+   of a note. Translucent text colour rather than a grey, so it blends into any
+   note colour: whitish in the dark theme, blackish in the light one. */
+@utility note-icon-button {
+    @apply inline-flex items-center justify-center h-5 text-t-text/50 hover:text-t-text/85
+           cursor-pointer disabled:invisible;
+}
+
+/* Revealed like matrix-moves, for the whole note rather than a name. */
+@utility note-reveal {
+    @apply opacity-0 transition-opacity duration-75 group-hover:opacity-100 group-focus-within:opacity-100;
+}
+
+/* The note itself: a faint tint of its colour, framed in the colour as
+   vivid as its band in the grid cell. Both set inline. Barely rounded. */
+@utility note-card {
+    @apply relative min-h-[54px] border rounded-xs px-2.5 py-2 pr-8;
+}
+
+/* The trash and the colour dot, in one 20px column 6px from the right, the
+   trash 2px above the dot. 7px from the top (inside the 1px border) centres
+   the pair in a one-line note, with as much room above the trash as below
+   the dot: min-h-[54px] keeps a one-line note tall enough for that. */
+@utility note-tools {
+    @apply absolute top-[7px] right-1.5 flex flex-col items-center gap-0.5;
+}
+
+/* A button of that column, its icon centred in it. At rest, the text colour
+   blended in soft-light, so it takes the note's own hue, lighter in the dark
+   theme and darker in the light one, rather than sitting on it as a grey.
+   Hovered, plain and nearly opaque. */
+@utility note-tool {
+    @apply inline-flex items-center justify-center w-5 h-5 cursor-pointer
+           text-t-text mix-blend-soft-light hover:text-t-text/85 hover:mix-blend-normal;
+}
+
+/* The dot's button, shorter than the trash's since the dot is smaller. */
+@utility note-tool-small {
+    @apply inline-flex items-center justify-center w-5 h-4 cursor-pointer;
+}
+
+/* The note's current colour, opening the palette. */
+@utility note-dot {
+    @apply block w-2.5 h-2.5 rounded-full;
+}
+
+/* The palette, under the dot, over whatever follows the note. */
+@utility note-palette {
+    @apply absolute top-full right-0 mt-1 z-10 flex items-center gap-1.5 p-2 rounded border border-t-border
+           bg-t-surface shadow-lg;
+}
+
+/* Grows with its text: the textarea and an invisible copy of the text share
+   one grid cell, so the copy sizes the cell and the textarea fills it. This
+   works where field-sizing does not, WKWebView included. */
+@utility note-grow {
+    @apply grid;
+}
+
+@utility note-mirror {
+    @apply invisible [grid-area:1/1] whitespace-pre-wrap break-words text-[13px] leading-5;
+}
+
+@utility note-text {
+    @apply [grid-area:1/1] block w-full p-0 m-0 bg-transparent border-0 outline-none resize-none overflow-hidden
+           text-[13px] leading-5 text-t-text;
+}
+
+/* A note colour to pick, in its own solid colour rather than tinted. */
+@utility note-swatch {
+    @apply w-3 h-3 shrink-0 rounded-full cursor-pointer transition-transform duration-75 hover:scale-125;
+}
+
+/* The current colour: a ring of the swatch's own colour, set apart from it
+   by a gap of the palette's background. The markup sets `color` to the
+   swatch colour, which the ring takes as currentColor. */
+@utility note-swatch-active {
+    @apply shadow-[0_0_0_2px_var(--t-surface),0_0_0_3.5px_currentColor] hover:scale-100;
+}

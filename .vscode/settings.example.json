@@ -1,0 +1,40 @@
+{
+    // Copy to .vscode/settings.json, which is gitignored so that per-machine
+    // tweaks never land in a commit.
+
+    // vshaxe: use the project's build file, so completion sees the same
+    // libraries and defines the build does.
+    "haxe.displayConfigurations": [["build.hxml"]],
+    "haxe.enableCompilationServer": true,
+
+    // Tailwind's extension does not know about Haxe files by default, so the
+    // class names written inside wisdom's markup strings get no completion and
+    // no hover preview without this.
+    "tailwindCSS.includeLanguages": {
+        "haxe": "html"
+    },
+    "tailwindCSS.experimental.classRegex": [
+        ["class=\\$\\{([^}]*)\\}", "'([^']*)'"],
+        ["class=\"([^\"]*)\""]
+    ],
+
+    // The Rust side lives in a subdirectory.
+    "rust-analyzer.linkedProjects": ["src-tauri/Cargo.toml"],
+
+    "files.exclude": {
+        "**/.haxelib": true,
+        "**/dist": true,
+        "**/src-tauri/target": true
+    },
+
+    "search.exclude": {
+        "**/lib": true,
+        "**/dist": true,
+        "**/src-tauri/target": true
+    },
+
+    "[haxe]": {
+        "editor.insertSpaces": true,
+        "editor.tabSize": 4
+    }
+}

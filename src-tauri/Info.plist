@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+        Merged into the generated Info.plist by tauri-bundler. Keys Tauri
+        already writes (bundle id, version, name) are deliberately absent, so
+        the version stays driven by package.json through sync-version.
+
+        NSHighResolutionCapable keeps text crisp on Retina displays, and
+        LSApplicationCategoryType is what the Finder and the App Store use to
+        classify the app.
+    -->
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.productivity</string>
+</dict>
+</plist>

@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+# A new push to the same branch cancels the run in flight. CI here is a signal,
+# not a record, and the older answer stops being interesting the moment there
+# is a newer commit.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The kit is a submodule, and a private one, so the default
+          # GITHUB_TOKEN cannot reach it. KIT_TOKEN is a personal access token
+          # with read access to it; set it as a repository secret. The
+          # fallback keeps a public setup working with no secret at all.
+          submodules: recursive
+          token: ${{ secrets.KIT_TOKEN || github.token }}
+
+      # Referenced by path inside the submodule rather than across repos, so
+      # the action is always the one the pinned kit ships. A cross-repo `uses:`
+      # would let the two drift.
+      - uses: ./lib/wisdom-kit/.github/actions/build-frontend
+        with:
+          release: 'true'
+
+      # The web build is a deliverable in its own right, and the same bytes
+      # Tauri embeds. Keeping it lets anyone open a pull request's build in a
+      # browser without a desktop toolchain.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web
+          path: dist/web
+          retention-days: 7
+
+  desktop:
+    name: Desktop (${{ matrix.os }})
+    needs: frontend
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, ubuntu-22.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The kit is a submodule, and a private one, so the default
+          # GITHUB_TOKEN cannot reach it. KIT_TOKEN is a personal access token
+          # with read access to it; set it as a repository secret. The
+          # fallback keeps a public setup working with no secret at all.
+          submodules: recursive
+          token: ${{ secrets.KIT_TOKEN || github.token }}
+
+      # Referenced by path inside the submodule rather than across repos, so
+      # the action is always the one the pinned kit ships. A cross-repo `uses:`
+      # would let the two drift.
+      - uses: ./lib/wisdom-kit/.github/actions/build-frontend
+
+      - name: Install the Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev libsoup-3.0-dev libgtk-3-dev \
+            libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # A compile, not a bundle. This answers "does the Rust side still
+      # build on all three systems", in a few minutes rather than the
+      # three quarters of an hour a full bundle run takes. The bundles are
+      # release.yml's job.
+      - name: Compile the desktop app
+        working-directory: src-tauri
+        run: cargo build --release --locked

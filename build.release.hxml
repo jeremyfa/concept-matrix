@@ -1,0 +1,15 @@
+# Release: dead code elimination, no traces, no source map.
+#
+# A separate file rather than extra flags on top of the development build, so
+# `haxe build.release.hxml` is the whole story and there is no way to ship a
+# debug bundle by forgetting one. A source map in particular cannot be turned
+# off once build.hxml has turned it on, which is why neither file includes the
+# other.
+
+lib/wisdom-kit/kit.hxml
+--class-path src
+--main app.Main
+
+--dce full
+-D no-traces
+--js dist/web/frontend.js

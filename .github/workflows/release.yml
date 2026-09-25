@@ -1,0 +1,238 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Build the artifacts but do not create a release
+        type: boolean
+        default: true
+
+# EACH TARGET IS BUILT ON ITS OWN OPERATING SYSTEM.
+#
+# That is possible because the export scripts detect their host and pick a
+# strategy, rather than assuming a Mac. Nothing is cross-compiled here: no
+# 1.5 GB MSVC SDK download for Windows, and Docker on the Linux runners runs
+# the matching architecture natively rather than emulating it.
+#
+# The same scripts also still produce everything from one Mac, with
+# `npm run export all`. Both routes name their artifacts identically, so a
+# release can come from either.
+
+permissions:
+  contents: write
+
+jobs:
+
+  build:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS universal
+            os: macos-14
+            target: mac
+            artifact: mac
+          - name: Linux x64
+            os: ubuntu-22.04
+            target: linux x64
+            artifact: linux-x64
+          - name: Linux arm64
+            os: ubuntu-22.04-arm
+            target: linux arm64
+            artifact: linux-arm64
+          - name: Windows x64
+            os: windows-2022
+            target: windows
+            artifact: windows-x64
+
+    runs-on: ${{ matrix.os }}
+
+    # Presence probe. A fork has no secrets, and every signing step below is
+    # gated on this so that a fork still produces (unsigned) artifacts instead
+    # of failing at the first `security import`.
+    env:
+      CODESIGN: ${{ secrets.APPLE_CERTIFICATE_P12 != '' }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The kit is a submodule, and a private one, so the default
+          # GITHUB_TOKEN cannot reach it. KIT_TOKEN is a personal access token
+          # with read access to it; set it as a repository secret. The
+          # fallback keeps a public setup working with no secret at all.
+          submodules: recursive
+          token: ${{ secrets.KIT_TOKEN || github.token }}
+
+      # Referenced by path inside the submodule rather than across repos, so
+      # the action is always the one the pinned kit ships. A cross-repo `uses:`
+      # would let the two drift.
+      - uses: ./lib/wisdom-kit/.github/actions/build-frontend
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: ${{ matrix.artifact }}
+
+      # --- macOS signing -------------------------------------------------
+      #
+      # The certificate lives in a keychain created for this job and deleted
+      # when it ends, so it is never added to the runner's login keychain and
+      # never outlives the run. The password is random per run.
+
+      - name: Import the signing certificate
+        if: runner.os == 'macOS' && env.CODESIGN == 'true'
+        env:
+          APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -base64 24)"
+          echo "SIGNING_KEYCHAIN=$KEYCHAIN" >> "$GITHUB_ENV"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+
+          CERT_PATH="$RUNNER_TEMP/certificate.p12"
+          echo -n "$APPLE_CERTIFICATE_P12" | base64 --decode > "$CERT_PATH"
+          security import "$CERT_PATH" \
+            -k "$KEYCHAIN" \
+            -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign -T /usr/bin/security
+          rm -f "$CERT_PATH"
+
+          # Without this, codesign shows a GUI prompt for keychain access,
+          # which on a headless runner means the job hangs until it times out.
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
+
+          security list-keychain -d user -s "$KEYCHAIN" login.keychain-db
+
+          # Read the identity back from the keychain rather than storing it as
+          # a sixth secret: it has to match the certificate exactly, and this
+          # way it cannot drift.
+          IDENTITY="$(security find-identity -v -p codesigning "$KEYCHAIN" \
+            | grep 'Developer ID Application' \
+            | head -1 \
+            | sed -E 's/.*"(.*)"/\1/')"
+          if [ -z "$IDENTITY" ]; then
+            echo "::error::no Developer ID Application certificate in the imported .p12"
+            exit 1
+          fi
+          echo "::add-mask::$IDENTITY"
+          echo "APPLE_SIGNING_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
+
+      # --- Linux ----------------------------------------------------------
+
+      - name: Install the Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev libsoup-3.0-dev libgtk-3-dev \
+            libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      # --- Windows ---------------------------------------------------------
+      #
+      # The scripts are bash and the Windows runner defaults to PowerShell, so
+      # the build step below sets its own shell. NSIS comes from Chocolatey,
+      # which is preinstalled on the runner image.
+
+      - name: Install NSIS
+        if: runner.os == 'Windows'
+        run: choco install nsis -y --no-progress
+
+      # --- Build -----------------------------------------------------------
+
+      - name: Build
+        shell: bash
+        env:
+          # Empty on a fork, which makes export-mac.sh take its unsigned path.
+          ALLOW_UNSIGNED: ${{ (runner.os == 'macOS' && env.CODESIGN != 'true') && '1' || '0' }}
+        # Through the kit's CLI, not a path: the export scripts live in the
+        # kit and a project never spells out where.
+        run: node lib/wisdom-kit/cli.mjs export ${{ matrix.target }}
+
+      - name: Notarize and staple
+        if: runner.os == 'macOS' && env.CODESIGN == 'true'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        shell: bash
+        run: node lib/wisdom-kit/cli.mjs sign-mac
+
+      # Always, so the keychain is gone even when the build failed.
+      - name: Remove the signing keychain
+        if: always() && runner.os == 'macOS' && env.CODESIGN == 'true'
+        run: |
+          security list-keychain -d user -s login.keychain-db || true
+          security delete-keychain "$SIGNING_KEYCHAIN" || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bundles-${{ matrix.artifact }}
+          path: dist/bundles/*
+          if-no-files-found: error
+          retention-days: 14
+
+  web:
+    name: Web build
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The kit is a submodule, and a private one, so the default
+          # GITHUB_TOKEN cannot reach it. KIT_TOKEN is a personal access token
+          # with read access to it; set it as a repository secret. The
+          # fallback keeps a public setup working with no secret at all.
+          submodules: recursive
+          token: ${{ secrets.KIT_TOKEN || github.token }}
+
+      # Referenced by path inside the submodule rather than across repos, so
+      # the action is always the one the pinned kit ships. A cross-repo `uses:`
+      # would let the two drift.
+      - uses: ./lib/wisdom-kit/.github/actions/build-frontend
+      - name: Package the web build
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          PREFIX="$(grep -m1 '^ARTIFACT_PREFIX=' project.config.sh | cut -d'"' -f2)"
+          mkdir -p dist/bundles
+          ( cd dist/web && zip -qr "../bundles/$PREFIX-v$VERSION-web.zip" . )
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bundles-web
+          path: dist/bundles/*
+          if-no-files-found: error
+
+  release:
+    name: Publish
+    needs: [build, web]
+    runs-on: ubuntu-22.04
+    if: startsWith(github.ref, 'refs/tags/v') && !inputs.dry_run
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: bundles-*
+          merge-multiple: true
+
+      - name: List what will be published
+        run: ls -lh artifacts
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          draft: true
+          generate_release_notes: true
+          # A draft, on purpose. Someone should open the macOS disk image and
+          # the Linux AppImage on a real machine before this becomes a
+          # download other people get.

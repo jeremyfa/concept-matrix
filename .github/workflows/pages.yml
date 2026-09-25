@@ -1,0 +1,62 @@
+name: Pages
+
+# Deploy the web build to GitHub Pages.
+#
+# OFF BY DEFAULT. It runs only when the repository variable DEPLOY_PAGES is
+# set to "true" (Settings, Secrets and variables, Actions, Variables), so
+# forking this template does not silently publish anything. You also have to
+# set Pages' source to "GitHub Actions" in the repository settings.
+#
+# This works because web/index.html uses relative paths throughout, so the
+# same dist/web that Tauri embeds also serves correctly from the
+# /<repository>/ subpath Pages puts it on.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time, and let a run in flight finish rather than
+# cancelling it: interrupting a deploy can leave the site half-updated.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+
+  deploy:
+    if: vars.DEPLOY_PAGES == 'true'
+    runs-on: ubuntu-22.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The kit is a submodule, and a private one, so the default
+          # GITHUB_TOKEN cannot reach it. KIT_TOKEN is a personal access token
+          # with read access to it; set it as a repository secret. The
+          # fallback keeps a public setup working with no secret at all.
+          submodules: recursive
+          token: ${{ secrets.KIT_TOKEN || github.token }}
+
+      # Referenced by path inside the submodule rather than across repos, so
+      # the action is always the one the pinned kit ships. A cross-repo `uses:`
+      # would let the two drift.
+      - uses: ./lib/wisdom-kit/.github/actions/build-frontend
+        with:
+          release: 'true'
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/web
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

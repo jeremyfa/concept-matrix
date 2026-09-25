@@ -1,0 +1,11 @@
+# Everything shared with every other project on this kit lives in kit.hxml:
+# the libraries, the defines, the JavaScript target. Only what is genuinely
+# this project's own belongs here.
+
+lib/wisdom-kit/kit.hxml
+
+--class-path src
+--main app.Main
+
+-D js-source-map
+--js dist/web/frontend.js

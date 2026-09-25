@@ -1,0 +1,46 @@
+[package]
+name = "concept-matrix"
+version = "0.1.0"
+description = "Game design tool to study how different concepts or mechanics interact with each others"
+edition = "2021"
+rust-version = "1.77.2"
+
+# Cargo requires underscores in a library name, and the _lib suffix avoids a
+# bin/lib name collision that breaks the Windows build.
+[lib]
+name = "concept_matrix_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "=2.6.3", features = [] }
+
+[dependencies]
+# generate_context! is expanded in this crate, so tauri is a direct dependency
+# even though the app logic is in the kit.
+tauri = { version = "=2.11.5", features = [] }
+
+# The shared desktop host: it registers the plugins below and applies the
+# per-platform window chrome. Bumping the kit submodule updates that logic.
+wisdom-kit-tauri = { path = "../lib/wisdom-kit/tauri" }
+
+# The plugins have to be DIRECT dependencies of this crate, even though the
+# kit is what registers them. Tauri's ACL collects permission manifests
+# through Cargo's `links` mechanism, which only reaches direct dependents, so a
+# plugin reachable solely through the kit builds and then fails at startup with
+# "Permission dialog:allow-open not found".
+#
+# This list must match the one the kit registers. `npm run check-config`
+# compares them, so a plugin added to the kit and forgotten here is caught
+# before the build rather than at runtime.
+tauri-plugin-dialog = "=2.7.3"
+tauri-plugin-fs = "=2.5.2"
+tauri-plugin-opener = "=2.5.5"
+tauri-plugin-clipboard-manager = "=2.3.3"
+
+[profile.release]
+# Smaller binaries, at the cost of build time. Worth it for a shipped app.
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

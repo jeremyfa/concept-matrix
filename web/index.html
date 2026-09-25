@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Concept Matrix</title>
+
+    <!--
+        Every path here is RELATIVE, never rooted.
+
+        The same dist/web is served three ways: from tauri://localhost in the
+        desktop app, from the root of a domain, and from a /<repo>/ subpath on
+        GitHub Pages. Relative is the only form that survives all three, and
+        there is deliberately no <base href>.
+    -->
+    <link rel="icon" href="favicon.svg" />
+    <link rel="stylesheet" href="frontend.css" />
+    <link rel="stylesheet" href="lucide-font/lucide.css" />
+</head>
+<body>
+    <!--
+        No colors on <html> or <body>: the background comes from the theme
+        tokens in frontend.css, so switching to the light theme cannot flash a
+        hardcoded dark page first.
+
+        No inline script either. The Tauri window drag region is installed from
+        Haxe by TauriBackend, which is what lets this one page serve both the
+        browser build and the desktop build unchanged.
+    -->
+    <div id="container"></div>
+    <script src="frontend.js"></script>
+</body>
+</html>

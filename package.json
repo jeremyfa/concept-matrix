@@ -1,0 +1,37 @@
+{
+  "name": "concept-matrix",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Game design tool to study how different concepts or mechanics interact with each others",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "postinstall": "node lib/wisdom-kit/cli.mjs setup --soft",
+    "setup": "node lib/wisdom-kit/cli.mjs setup",
+    "build": "node lib/wisdom-kit/cli.mjs build",
+    "build:release": "node lib/wisdom-kit/cli.mjs build --release",
+    "dev": "node lib/wisdom-kit/cli.mjs dev",
+    "dev:web": "node lib/wisdom-kit/cli.mjs dev:web",
+    "clean": "node lib/wisdom-kit/cli.mjs clean",
+    "check-config": "node lib/wisdom-kit/cli.mjs check-config",
+    "sync-config": "node lib/wisdom-kit/cli.mjs sync-config",
+    "sync-local": "node lib/wisdom-kit/cli.mjs sync-local",
+    "sync-version": "node lib/wisdom-kit/cli.mjs sync-version",
+    "generate-icons": "node lib/wisdom-kit/cli.mjs generate-icons",
+    "create-app": "node lib/wisdom-kit/cli.mjs create-app",
+    "tauri": "node lib/wisdom-kit/cli.mjs tauri",
+    "export": "node lib/wisdom-kit/cli.mjs export",
+    "sign-mac": "node lib/wisdom-kit/cli.mjs sign-mac",
+    "publish-itchio": "node lib/wisdom-kit/cli.mjs publish-itchio"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.0.0",
+    "@tauri-apps/cli": "^2",
+    "chokidar-cli": "^3.0.0",
+    "concurrently": "^9.1.2",
+    "esbuild": "^0.25.0",
+    "lucide-static": "^1.48.0",
+    "tailwindcss": "^4.0.0"
+  },
+  "author": "Jeremy Faivre"
+}
