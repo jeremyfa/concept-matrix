@@ -35,6 +35,18 @@ jobs:
           pattern: bundles-*
           merge-multiple: true
 
+      # The web build is an artifact as a folder (see bundles.yml). A release
+      # publishes it as a zip, with the folder as its single top-level entry.
+      - uses: actions/download-artifact@v4
+        with:
+          path: web
+          pattern: '*-web'
+
+      - name: Zip the web build
+        run: |
+          cd web
+          for dir in *; do zip -qr "../artifacts/$dir.zip" "$dir"; done
+
       - name: List what will be published
         run: ls -lh artifacts
 

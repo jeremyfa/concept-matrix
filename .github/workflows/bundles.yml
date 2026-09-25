@@ -1,8 +1,8 @@
 name: Bundles
 
 # Every distributable: the macOS disk image, one Linux AppImage per
-# architecture, the Windows installer and portable zip, and the web build as a
-# zip. Each lands as an artifact of the run that called this workflow.
+# architecture, the Windows installer and portable zip, and the web build.
+# Each lands as an artifact of the run that called this workflow.
 #
 # Not triggered on its own. ci.yml calls it for every push to main, so each
 # version of main can be downloaded, and release.yml calls it for a tag, then
@@ -26,6 +26,9 @@ jobs:
 
   build:
     name: ${{ matrix.name }}
+    # The frontend is built once, by the web job, and reused here: the same
+    # bytes in every bundle, and no Haxe needed where it has no release.
+    needs: web
     strategy:
       fail-fast: false
       matrix:
@@ -65,10 +68,17 @@ jobs:
           submodules: recursive
           token: ${{ secrets.KIT_TOKEN || github.token }}
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.web.outputs.artifact }}
+          path: dist/web
+
       # Referenced by path inside the submodule rather than across repos, so
       # the action is always the one the pinned kit ships. A cross-repo `uses:`
       # would let the two drift.
       - uses: ./lib/wisdom-kit/.github/actions/build-frontend
+        with:
+          prebuilt: 'true'
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -153,6 +163,8 @@ jobs:
       - name: Build
         shell: bash
         env:
+          # The frontend downloaded above, not rebuilt.
+          KIT_PREBUILT_FRONTEND: '1'
           # Empty on a fork, which makes export-mac.sh take its unsigned path.
           ALLOW_UNSIGNED: ${{ (runner.os == 'macOS' && env.CODESIGN != 'true') && '1' || '0' }}
         # Through the kit's CLI, not a path: the export scripts live in the
@@ -185,6 +197,8 @@ jobs:
   web:
     name: Web
     runs-on: ubuntu-22.04
+    outputs:
+      artifact: ${{ steps.name.outputs.artifact }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -195,16 +209,25 @@ jobs:
           submodules: recursive
           token: ${{ secrets.KIT_TOKEN || github.token }}
 
-      # Toolchain and dependencies. The export below rebuilds dist/web in
-      # release mode and zips it, named like every other artifact.
+      # The one frontend build of the run, in release mode.
       - uses: ./lib/wisdom-kit/.github/actions/build-frontend
 
-      - name: Package the web build
-        run: node lib/wisdom-kit/cli.mjs export web
+      # Named like every other artifact, from the zip the kit's export writes.
+      - name: Name the web build
+        id: name
+        env:
+          KIT_PREBUILT_FRONTEND: '1'
+        run: |
+          node lib/wisdom-kit/cli.mjs export web
+          zip="$(basename dist/bundles/*-web.zip)"
+          echo "artifact=${zip%.zip}" >> "$GITHUB_OUTPUT"
 
+      # The folder itself, not the zip: GitHub already hands an artifact out
+      # as a zip, so a zip inside would be an archive in an archive. Downloaded,
+      # this artifact IS the site. The desktop jobs above use it too.
       - uses: actions/upload-artifact@v4
         with:
-          name: bundles-web
-          path: dist/bundles/*
+          name: ${{ steps.name.outputs.artifact }}
+          path: dist/web
           if-no-files-found: error
           retention-days: 14
