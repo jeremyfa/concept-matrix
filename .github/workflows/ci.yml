@@ -47,6 +47,9 @@ jobs:
   desktop:
     name: Desktop (${{ matrix.os }})
     needs: frontend
+    # A push to main builds the full bundles below, which compile the desktop
+    # app anyway.
+    if: github.event_name != 'push' || github.ref != 'refs/heads/main'
     strategy:
       fail-fast: false
       matrix:
@@ -88,3 +91,16 @@ jobs:
       - name: Compile the desktop app
         working-directory: src-tauri
         run: cargo build --release --locked
+
+  # Every push to main produces the distributables as artifacts of the run:
+  # the macOS disk image, the Linux AppImages (x64 and arm64), the Windows
+  # installer and portable zip, and the web build as a zip. Other branches and
+  # pull requests keep the quick checks above.
+  bundles:
+    name: Bundles
+    needs: frontend
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/bundles.yml
+    # The signing secrets, when the repository has them. Without them the
+    # macOS disk image is built unsigned.
+    secrets: inherit
