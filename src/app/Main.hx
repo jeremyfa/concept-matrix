@@ -81,23 +81,23 @@ class Main implements X {
                             <span class="text-[14px] font-semibold truncate">Concept Matrix</span>
                             <div class="flex-1"></div>
                             <div class="flex items-center gap-1" data-tauri-drag-region="false">
-                                <IconButton kind="file-plus"
+                                <IconButton kind="file-plus" size="small"
                                             title=${'New matrix (' + Keys.modifierLabel() + 'N)'}
                                             onpress=${() -> DocumentActions.newMatrix()} />
-                                <IconButton kind="folder-open"
+                                <IconButton kind="folder-open" size="small"
                                             title=${'Open (' + Keys.modifierLabel() + 'O)'}
                                             onpress=${() -> DocumentActions.open()} />
                                 // Not an IconButton: Save needs the click event,
                                 // Option/Alt held turning it into Save As. The
-                                // classes are the ones of IconButton.
+                                // classes are the ones of a small IconButton.
                                 <button type="button"
                                         title=${'Save (' + Keys.modifierLabel() + 'S), ' + (Platform.isMac ? '⌥' : 'Alt') + '-click to Save As'}
                                         aria-label="Save"
-                                        class="inline-flex items-center justify-center w-8 h-8 shrink-0 rounded-lg transition-colors text-t-text-muted hover:text-t-text hover:bg-t-surface-2 cursor-pointer"
+                                        class="inline-flex items-center justify-center shrink-0 transition-colors w-7 h-7 rounded-md text-t-text-muted hover:text-t-text hover:bg-t-surface-2 cursor-pointer"
                                         onclick=${(e) -> DocumentActions.save(e.altKey)}>
-                                    <Icon kind="save" size=15 display="" />
+                                    <Icon kind="save" size=14 display="" />
                                 </button>
-                                <IconButton kind="settings"
+                                <IconButton kind="settings" size="small"
                                             title=${'Settings (' + Keys.modifierLabel() + ',)'}
                                             onpress=${() -> chrome.settingsOpen = true} />
                             </div>
