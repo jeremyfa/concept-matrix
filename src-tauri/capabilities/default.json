@@ -32,6 +32,7 @@
     },
 
     "opener:allow-open-url",
+    "opener:allow-default-urls",
     "opener:allow-reveal-item-in-dir",
 
     "clipboard-manager:allow-write-text",

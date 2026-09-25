@@ -27,7 +27,9 @@ class Main implements X {
     static function openAuthor(e:js.html.Event):Void {
 
         e.preventDefault();
-        Platform.openUrl(AUTHOR_URL, _ -> {});
+        Platform.openUrl(AUTHOR_URL, error -> {
+            if (error != null) chrome.message = 'Could not open the link: ' + Std.string(error);
+        });
 
     }
 
