@@ -65,6 +65,7 @@ class MatrixTable extends Component {
                             <input class=${model.matrix.selectedRow == concept ? "matrix-name-selected" : "matrix-name"}
                                    style=${{ width: nameWidth }} data-concept=${row}
                                    value=${concept.name} aria-label="Concept name"
+                                   onclick=${(e) -> selectDefaultName(concept, e)}
                                    oninput=${(e) -> rename(concept, e)}
                                    onkeydown=${(e) -> leaveOnEnter(e)}
                                    onblur=${(_) -> removeIfEmpty(concept)} />
@@ -151,6 +152,17 @@ class MatrixTable extends Component {
 
         final input:InputElement = cast e.target;
         concept.name = input.value;
+
+    }
+
+    /** A name still at its default is a placeholder: clicking it selects it
+        whole, so typing replaces it. On click rather than focus, because the
+        mouseup that follows a focus would place the caret and undo it. */
+    function selectDefaultName(concept:Concept, e:Event):Void {
+
+        if (concept.name != model.matrix.defaultName()) return;
+        final input:InputElement = cast e.target;
+        input.select();
 
     }
 
