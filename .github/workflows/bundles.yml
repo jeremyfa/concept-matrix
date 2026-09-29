@@ -34,7 +34,10 @@ jobs:
       matrix:
         include:
           - name: macOS universal
-            os: macos-14
+            # The SDK sets the title bar metrics: built against an older one,
+            # the app runs in compatibility mode on current macOS and its
+            # traffic lights sit lower than trafficLightPosition intends.
+            os: macos-26
             target: mac
             artifact: mac
           - name: Linux x64
