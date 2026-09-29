@@ -209,7 +209,7 @@
 }
 
 /* A note and its move controls. The markup adds `group` next to it, so the
-   controls, the trash and the colour dot show while the note is hovered or
+   controls and the colour dot show while the note is hovered or
    edited. */
 @utility note-row {
     @apply relative;
@@ -242,29 +242,18 @@
 /* The note itself: a faint tint of its colour, framed in the colour as
    vivid as its band in the grid cell. Both set inline. Barely rounded. */
 @utility note-card {
-    @apply relative min-h-[54px] border rounded-xs px-2.5 py-2 pr-8;
+    @apply relative border rounded-xs px-2.5 py-2 pr-7;
 }
 
-/* The trash and the colour dot, in one 20px column 6px from the right, the
-   trash 2px above the dot. 7px from the top (inside the 1px border) centres
-   the pair in a one-line note, with as much room above the trash as below
-   the dot: min-h-[54px] keeps a one-line note tall enough for that. */
+/* The colour dot, 6px from the right, level with the first line of text;
+   pr-7 on the card keeps the text clear of it. */
 @utility note-tools {
-    @apply absolute top-[7px] right-1.5 flex flex-col items-center gap-0.5;
+    @apply absolute top-2 right-1.5 flex items-center;
 }
 
-/* A button of that column, its icon centred in it. At rest, the text colour
-   blended in soft-light, so it takes the note's own hue, lighter in the dark
-   theme and darker in the light one, rather than sitting on it as a grey.
-   Hovered, plain and nearly opaque. */
+/* The dot's button, as tall as a line of text. */
 @utility note-tool {
-    @apply inline-flex items-center justify-center w-5 h-5 cursor-pointer
-           text-t-text mix-blend-soft-light hover:text-t-text/85 hover:mix-blend-normal;
-}
-
-/* The dot's button, shorter than the trash's since the dot is smaller. */
-@utility note-tool-small {
-    @apply inline-flex items-center justify-center w-5 h-4 cursor-pointer;
+    @apply inline-flex items-center justify-center w-4 h-5 cursor-pointer;
 }
 
 /* The note's current colour, opening the palette. */

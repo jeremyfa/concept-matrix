@@ -123,8 +123,13 @@ class MatrixData extends BaseModel {
         intersection only exists while it holds notes. */
     public function removeNote(note:Note):Void {
 
+        // Already gone when Shift+Backspace deleted it and the blur of its
+        // removed field follows.
         final intersection = note.intersection;
+        if (intersection.notes.indexOf(note) == -1) return;
+
         intersection.removeNote(note);
+        if (colorPickerNote == note) colorPickerNote = null;
 
         if (intersection.notes.length == 0) {
             var intersections = [].concat(this.intersections);

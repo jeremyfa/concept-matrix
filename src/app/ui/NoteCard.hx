@@ -4,16 +4,20 @@ import app.NoteColors;
 import app.model.Note;
 import js.html.Element;
 import js.html.Event;
+import js.html.KeyboardEvent;
 import js.html.TextAreaElement;
 import wisdom.Component;
 
 /**
  * One note: its text, always editable, on its colour's tint.
  *
- * The move controls, the trash and the colour dot show while the note is
- * hovered or edited. Pressing them does not take the focus from the text
- * (mousedown is cancelled), otherwise leaving an empty note to pick its colour
- * first would delete it on blur.
+ * The move controls and the colour dot show while the note is hovered or
+ * edited. Pressing them does not take the focus from the text (mousedown is
+ * cancelled), otherwise leaving an empty note to pick its colour first would
+ * delete it on blur.
+ *
+ * A note is deleted like a concept: by emptying its text and leaving it, or
+ * at once with Shift+Backspace.
  */
 class NoteCard extends Component {
 
@@ -53,21 +57,13 @@ class NoteCard extends Component {
                         <textarea class="note-text" rows="1" data-note=${index} placeholder="…"
                                   aria-label="Note text" value=${note.text}
                                   oninput=${(e) -> write(e)}
-                                  onblur=${(_) -> trimText()}></textarea>
+                                  onkeydown=${(e) -> handleKey(e)}
+                                  onblur=${(_) -> removeIfEmpty()}></textarea>
                     </div>
-                    // The trash, and under it a dot of the current colour that
-                    // opens the palette. They stay shown while it is open.
-                    // Each button fades in by itself, never their column: a
-                    // column below full opacity would cut the trash off from the
-                    // note behind it, and its soft-light blend would show opaque
-                    // until the fade ends.
+                    // A dot of the current colour that opens the palette. It
+                    // stays shown while the palette is open.
                     <div class="note-tools">
                         <button type="button" class=${pickerOpen ? "note-tool" : "note-tool note-reveal"}
-                                title="Delete note" aria-label="Delete note"
-                                onclick=${(_) -> matrix.removeNote(note)}>
-                            <Icon kind="trash-2" size=13 />
-                        </button>
-                        <button type="button" class=${pickerOpen ? "note-tool-small" : "note-tool-small note-reveal"}
                                 title="Color" aria-label="Color"
                                 onmousedown=${(e) -> keepFocus(e)}
                                 onclick=${(e) -> togglePicker(e)}>
@@ -97,18 +93,44 @@ class NoteCard extends Component {
 
     }
 
-    /** Trims the text once it is left. An empty note stays: notes are only
-        deleted with their trash. */
-    function trimText():Void {
+    /** Enter validates the note by leaving it, Shift+Enter starts a new line,
+        Shift+Backspace deletes the note. Not while an input method is
+        composing: its keys belong to the composition. */
+    function handleKey(e:Event):Void {
+
+        final key:KeyboardEvent = cast e;
+        if (key.isComposing) return;
+
+        if (key.key == 'Enter' && !key.shiftKey) {
+            e.preventDefault();
+            final text:TextAreaElement = cast e.target;
+            text.blur();
+        }
+        else if (key.key == 'Backspace' && key.shiftKey) {
+            e.preventDefault();
+            model.matrix.removeNote(note);
+        }
+
+    }
+
+    /** Once the text is left: trimmed, and the note deleted if nothing is
+        left of it. Not on every keystroke, which would delete the note while
+        its text is being retyped. */
+    function removeIfEmpty():Void {
 
         final trimmed = StringTools.trim(note.text);
-        if (trimmed != note.text) note.text = trimmed;
+        if (trimmed == '') {
+            model.matrix.removeNote(note);
+        }
+        else if (trimmed != note.text) {
+            note.text = trimmed;
+        }
 
     }
 
     /**
      * Opens or closes the palette. While it is open, pressing anywhere
-     * outside this note's trash, dot and palette closes it: another note, the
+     * outside this note's dot and palette closes it: another note, the
      * grid, the rest of the panel.
      */
     function togglePicker(e:Event):Void {

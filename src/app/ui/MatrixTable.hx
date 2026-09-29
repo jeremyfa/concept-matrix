@@ -67,7 +67,7 @@ class MatrixTable extends Component {
                                    value=${concept.name} aria-label="Concept name"
                                    onclick=${(e) -> selectDefaultName(concept, e)}
                                    oninput=${(e) -> rename(concept, e)}
-                                   onkeydown=${(e) -> leaveOnEnter(e)}
+                                   onkeydown=${(e) -> handleKey(concept, e)}
                                    onblur=${(_) -> removeIfEmpty(concept)} />
                         </th>
                         <foreach ${concepts} ${(col:Int, other:Concept) -> '<>
@@ -166,12 +166,29 @@ class MatrixTable extends Component {
 
     }
 
-    function leaveOnEnter(e:Event):Void {
+    /** Enter or Escape leaves the name, Shift+Backspace deletes the concept.
+        The last concept cannot be deleted, so it gets its default name back,
+        selected so typing replaces it. */
+    function handleKey(concept:Concept, e:Event):Void {
 
-        final key = (cast e:KeyboardEvent).key;
-        if (key == 'Enter' || key == 'Escape') {
-            final input:InputElement = cast e.target;
+        final key:KeyboardEvent = cast e;
+        if (key.isComposing) return;
+
+        final input:InputElement = cast e.target;
+        if (key.key == 'Enter' || key.key == 'Escape') {
             input.blur();
+        }
+        else if (key.key == 'Backspace' && key.shiftKey) {
+            e.preventDefault();
+            final matrix = model.matrix;
+            if (matrix.concepts.length > 1) {
+                matrix.remove(concept);
+            }
+            else {
+                concept.name = matrix.defaultName();
+                input.value = concept.name;
+                input.select();
+            }
         }
 
     }
