@@ -86,6 +86,10 @@ The rest of the project:
 
 After changing a name in `project.config.sh`, run `npm run sync-config`, then `npm run generate-icons` if you changed the icon. The [wisdom-kit README](https://github.com/jeremyfa/wisdom-kit) explains the rest of the commands and how the code fits together.
 
+## How this project is authored
+
+Many parts of this project are handwritten, and others were made with the help of coding assistants. Either way, every corner of the app is the result of careful software design, for which I take full responsibility.
+
 ## Licence
 
 [MIT](LICENSE)
