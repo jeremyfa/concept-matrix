@@ -3,6 +3,8 @@
 A tiny game design tool to study how concepts or mechanics interact with each
 other. List your concepts, and write notes at each intersection of the matrix.
 
+[Use it online](https://apps.jeremyfa.com/concept-matrix)
+
 https://github.com/user-attachments/assets/f4684ffa-55ab-4963-bbd9-4f91accf51cc
 
 Made with [Haxe](https://haxe.org), [Wisdom](https://github.com/jeremyfa/wisdom), [Tracker](https://github.com/jeremyfa/tracker) and [Tailwind](https://tailwindcss.com), on top of [wisdom-kit](https://github.com/jeremyfa/wisdom-kit). It runs in a browser or as a desktop app using [Tauri](https://tauri.app).
