@@ -72,7 +72,7 @@ class MatrixTable extends Component {
                         </th>
                         <foreach ${concepts} ${(col:Int, other:Concept) -> '<>
                             <td class=${cellClass(row, col, selectedRow, selectedCol)} style=${cellStyle(concept, other)}
-                                onclick=${(_) -> if (row != col) toggle(concept, other)}></td>
+                                onclick=${(_) -> toggle(concept, other)}></td>
                         '} />
                     </tr>
                 '} />
@@ -80,7 +80,7 @@ class MatrixTable extends Component {
                     <td class="matrix-gutter"></td>
                     <td class="matrix-add">
                         <button type="button" class="matrix-icon-button" title="Add concept" aria-label="Add concept"
-                                onclick=${(_) -> addConcept()}>
+                                onclick=${(e) -> addConcept(e)}>
                             <Icon kind="plus" size=14 />
                         </button>
                     </td>
@@ -91,7 +91,8 @@ class MatrixTable extends Component {
     }
 
     /** Whole literal class strings per case, because Tailwind reads source
-        text. The diagonal is a concept against itself: hatched and inert.
+        text. The diagonal is a concept against itself: hatched, and selectable
+        like the other cells.
 
         The path from each header to the selected cell is lightly highlighted:
         on its row the cells left of it, on its column the cells above it,
@@ -102,6 +103,7 @@ class MatrixTable extends Component {
         final cross = (row == selectedRow && col < selectedCol) || (col == selectedCol && row < selectedRow);
 
         if (row == col) {
+            if (selected) return row == 0 ? "matrix-self matrix-selected border-t" : "matrix-self matrix-selected";
             if (cross) return row == 0 ? "matrix-self matrix-cross border-t" : "matrix-self matrix-cross";
             return row == 0 ? "matrix-self border-t" : "matrix-self";
         }
@@ -135,7 +137,9 @@ class MatrixTable extends Component {
     }
 
     /** A cell shows its notes' colours stacked in bands, and stays plain when it
-        has no note.
+        has no note. On the diagonal the hatching stays on top of the bands:
+        an inline background replaces the one of matrix-self, so it is
+        repeated here.
 
         Plain is an explicit empty value, not a missing key: wisdom removes a
         missing style key with a field delete, which leaves the old value on
@@ -144,9 +148,13 @@ class MatrixTable extends Component {
 
         final intersection = model.matrix.intersection(rowConcept, colConcept);
         final background = intersection != null ? intersection.cellBackground : null;
-        return { backgroundImage: background != null ? background : '' };
+        if (background == null) return { backgroundImage: '' };
+        return { backgroundImage: rowConcept == colConcept ? SELF_HATCH + ', ' + background : background };
 
     }
+
+    /** The stripes of matrix-self, in app.css. */
+    static final SELF_HATCH = 'repeating-linear-gradient(-45deg, transparent 0 4px, var(--t-border) 4px 5px)';
 
     function rename(concept:Concept, e:Event):Void {
 
@@ -210,7 +218,12 @@ class MatrixTable extends Component {
 
     }
 
-    function addConcept():Void {
+    function addConcept(e:Event):Void {
+
+        // The new row takes the place of the + row, and wisdom reuses its
+        // cell for the new diagonal one while this click is still bubbling:
+        // left to bubble, it would reach that cell and select it.
+        e.stopPropagation();
 
         final matrix = model.matrix;
         matrix.add(matrix.defaultName());

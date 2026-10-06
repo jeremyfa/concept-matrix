@@ -14,7 +14,8 @@ class NotePanel extends Component {
         final matrix = model.matrix;
         final row = matrix.selectedRow;
         final col = matrix.selectedCol;
-        final title = row != null && col != null ? row.name + ' → ' + col.name : '';
+        // A concept against itself is titled with its name alone.
+        final title = row == null || col == null ? '' : row == col ? row.name : row.name + ' → ' + col.name;
 
         // No intersection yet means the cell has no note: only the + shows.
         final intersection = matrix.selectedIntersection;

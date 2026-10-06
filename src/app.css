@@ -174,9 +174,13 @@
     @apply shadow-[inset_0_0_0_40px_color-mix(in_srgb,var(--t-text)_6%,transparent)];
 }
 
-/* A concept against itself: hatched, not interactive. */
+/* A concept against itself: hatched, and open to notes like any other cell,
+   for what belongs to the concept alone. The stripes are transparent between
+   the lines, so the note bands MatrixTable adds under them show through. */
 @utility matrix-self {
-    @apply matrix-cell-base bg-[repeating-linear-gradient(-45deg,var(--t-surface)_0_4px,var(--t-border)_4px_5px)];
+    @apply matrix-cell-base bg-t-surface bg-[repeating-linear-gradient(-45deg,transparent_0_4px,var(--t-border)_4px_5px)]
+           cursor-pointer transition-shadow duration-75
+           hover:shadow-[inset_0_0_0_40px_color-mix(in_srgb,var(--t-text)_10%,transparent)];
 }
 
 /*

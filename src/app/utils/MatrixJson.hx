@@ -85,7 +85,6 @@ class MatrixJson {
         for (item in list(data.intersections, 'intersections')) {
             final row = index(item.row, concepts.length);
             final col = index(item.col, concepts.length);
-            if (row == col) throw 'An intersection links a concept to itself.';
 
             final intersection = new Intersection(matrix, concepts[row], concepts[col]);
             final notes:Array<Note> = [];

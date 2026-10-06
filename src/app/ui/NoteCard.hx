@@ -91,6 +91,20 @@ class NoteCard extends Component {
         final text:TextAreaElement = cast e.target;
         note.text = text.value;
 
+        // WebKit keeps the old line breaks of a textarea that the mirror has
+        // just made one line shorter, when deleting let its last word fit on
+        // the line above: the text stays a line taller than the textarea and
+        // its first line scrolls out of view. Changing the width for one
+        // layout makes it wrap the text again, and keeps the caret and the
+        // undo history, which setting the value would lose. A frame later, so
+        // the mirror has been rendered with the new text. The layout is forced
+        // with a call: Haxe drops a bare read of offsetWidth.
+        window.requestAnimationFrame(_ -> {
+            text.style.width = 'calc(100% - 1px)';
+            text.getBoundingClientRect();
+            text.style.width = '';
+        });
+
     }
 
     /** Enter validates the note by leaving it, Shift+Enter starts a new line,
