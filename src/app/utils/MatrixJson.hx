@@ -15,6 +15,7 @@ import haxe.Json;
  * {
  *   "format": "<APP_SLUG>",
  *   "version": 1,
+ *   "symmetric": false,
  *   "concepts": [ { "name": "Miroir", "description": null } ],
  *   "intersections": [
  *     { "row": 1, "col": 0, "notes": [ { "color": "#ef4444", "text": "RAS" } ] }
@@ -23,6 +24,10 @@ import haxe.Json;
  * ```
  *
  * `row` and `col` are indexes into `concepts`. Lists keep their display order.
+ *
+ * `symmetric` came after version 1 without changing it: a file without it
+ * reads as not symmetric, and an older build ignores it and still shows every
+ * note, one direction at a time.
  *
  * `format` is APP_SLUG from project.config.sh: renaming the project makes
  * files saved under the previous name unreadable.
@@ -42,6 +47,7 @@ class MatrixJson {
         final data = {
             format: FORMAT,
             version: VERSION,
+            symmetric: matrix.symmetric,
             concepts: [for (concept in concepts) { name: concept.name, description: concept.description }],
             intersections: [for (intersection in matrix.intersections) {
                 row: indexes.get(intersection.row),
@@ -70,6 +76,7 @@ class MatrixJson {
         }
 
         final matrix = new MatrixData();
+        matrix.symmetric = data.symmetric == true;
 
         final concepts:Array<Concept> = [];
         for (item in list(data.concepts, 'concepts')) {

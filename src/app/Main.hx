@@ -135,11 +135,17 @@ class Main implements X {
                     // Always mounted, hidden when there is nothing to show: a
                     // stable child count keeps wisdom matching nodes correctly
                     // across renders. The kit opens this on the settings
-                    // shortcut and closes it on Escape. Your own settings go
-                    // between its tags.
+                    // shortcut and closes it on Escape. The app settings go
+                    // between its tags, below the kit ones.
                     <div class=${chrome.settingsOpen ? "" : "hidden"}>
                         <if ${chrome.settingsOpen}>
-                            <SettingsPopup />
+                            <SettingsPopup>
+                                <SectionHeader label="Matrix" />
+                                <LabeledRow label="Symmetric" hint="A → B and B → A show the same notes">
+                                    <Switch value=${model.matrix.symmetric} ariaLabel="Symmetric"
+                                            onChange=${(value) -> model.matrix.symmetric = value} />
+                                </LabeledRow>
+                            </SettingsPopup>
                         </if>
                     </div>
 

@@ -96,10 +96,15 @@ class MatrixTable extends Component {
 
         The path from each header to the selected cell is lightly highlighted:
         on its row the cells left of it, on its column the cells above it,
-        nothing past the crossing. */
+        nothing past the crossing.
+
+        In symmetric mode the other cell of the selected pair is outlined too,
+        since it shows the same notes. The highlighted path stays the one of
+        the cell clicked. */
     function cellClass(row:Int, col:Int, selectedRow:Int, selectedCol:Int):String {
 
-        final selected = row == selectedRow && col == selectedCol;
+        final selected = (row == selectedRow && col == selectedCol)
+            || (model.matrix.symmetric && row == selectedCol && col == selectedRow);
         final cross = (row == selectedRow && col < selectedCol) || (col == selectedCol && row < selectedRow);
 
         if (row == col) {
@@ -123,11 +128,14 @@ class MatrixTable extends Component {
 
     }
 
-    /** Clicking the selected cell again closes it. */
+    /** Clicking the selected cell again closes it, and in symmetric mode so
+        does clicking the other cell of its pair, which shows as selected. */
     function toggle(rowConcept:Concept, colConcept:Concept):Void {
 
         final matrix = model.matrix;
-        if (matrix.selectedRow == rowConcept && matrix.selectedCol == colConcept) {
+        final same = matrix.selectedRow == rowConcept && matrix.selectedCol == colConcept;
+        final mirror = matrix.symmetric && matrix.selectedRow == colConcept && matrix.selectedCol == rowConcept;
+        if (same || mirror) {
             matrix.clearSelection();
         }
         else {
@@ -137,7 +145,7 @@ class MatrixTable extends Component {
     }
 
     /** A cell shows its notes' colours stacked in bands, and stays plain when it
-        has no note. On the diagonal the hatching stays on top of the bands:
+        has no note. In symmetric mode both cells of a pair show the same. On the diagonal the hatching stays on top of the bands:
         an inline background replaces the one of matrix-self, so it is
         repeated here.
 
@@ -146,7 +154,7 @@ class MatrixTable extends Component {
         the element. */
     function cellStyle(rowConcept:Concept, colConcept:Concept):Dynamic {
 
-        final intersection = model.matrix.intersection(rowConcept, colConcept);
+        final intersection = model.matrix.cell(rowConcept, colConcept);
         final background = intersection != null ? intersection.cellBackground : null;
         if (background == null) return { backgroundImage: '' };
         return { backgroundImage: rowConcept == colConcept ? SELF_HATCH + ', ' + background : background };

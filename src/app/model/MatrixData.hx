@@ -11,6 +11,11 @@ class MatrixData extends BaseModel {
 
     @serialize public var intersections:ReadOnlyArray<Intersection> = [];
 
+    /** A → B and B → A show the same notes, under the title "A + B". Only
+        changes what is shown and where new notes go: the notes of both
+        directions stay in `intersections`, and show again once it is off. */
+    @serialize public var symmetric:Bool = false;
+
     /** The cell whose notes are shown. Not saved: a selection belongs to a
         session, not to the document. */
     @observe public var selectedRow:Concept = null;
@@ -42,7 +47,31 @@ class MatrixData extends BaseModel {
     /** The intersection of the selected cell, or null when nothing is selected
         or the cell has no note yet. */
     @compute public function selectedIntersection():Intersection {
-        return selectedRow != null && selectedCol != null ? intersection(selectedRow, selectedCol) : null;
+        return selectedRow != null && selectedCol != null ? cell(selectedRow, selectedCol) : null;
+    }
+
+    /** The intersection the cell `row` × `col` shows, or null when it shows no
+        note. The intersection of that very cell, except in symmetric mode,
+        where both cells of a pair show the one in the lower half (the row
+        below the column), or the other one when the lower half has no note.
+        Falling back keeps notes in view when reordering moves them to the
+        upper half. */
+    public function cell(row:Concept, col:Concept):Intersection {
+
+        if (!symmetric || row == col) return intersection(row, col);
+
+        final lower = isLower(row, col);
+        final shown = lower ? intersection(row, col) : intersection(col, row);
+        if (shown != null) return shown;
+        return lower ? intersection(col, row) : intersection(row, col);
+
+    }
+
+    /** Whether the cell `row` × `col` is in the lower half of the grid. */
+    public function isLower(row:Concept, col:Concept):Bool {
+
+        return concepts.indexOf(row) > concepts.indexOf(col);
+
     }
 
     /** The intersection of `row` and `col`, or null when it has no note. */
@@ -105,11 +134,18 @@ class MatrixData extends BaseModel {
     }
 
     /** Adds a note to the cell `row` × `col`, creating its intersection on the
-        first note. The note starts with the default colour. */
+        first note. The note starts with the default colour. In symmetric mode
+        it goes to the intersection the cell shows, or to a new one in the
+        lower half. */
     public function addNote(row:Concept, col:Concept, text:String = ''):Note {
 
-        var intersection = intersection(row, col);
+        var intersection = cell(row, col);
         if (intersection == null) {
+            if (symmetric && !isLower(row, col)) {
+                final upper = row;
+                row = col;
+                col = upper;
+            }
             intersection = new Intersection(this, row, col);
             var intersections = [].concat(this.intersections);
             intersections.push(intersection);

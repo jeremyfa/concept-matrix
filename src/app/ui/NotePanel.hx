@@ -1,5 +1,6 @@
 package app.ui;
 
+import app.model.Concept;
 import app.model.Note;
 import facile.ReadOnlyArray;
 import js.html.MouseEvent;
@@ -14,8 +15,7 @@ class NotePanel extends Component {
         final matrix = model.matrix;
         final row = matrix.selectedRow;
         final col = matrix.selectedCol;
-        // A concept against itself is titled with its name alone.
-        final title = row == null || col == null ? '' : row == col ? row.name : row.name + ' → ' + col.name;
+        final title = row == null || col == null ? '' : titleOf(row, col);
 
         // No intersection yet means the cell has no note: only the + shows.
         final intersection = matrix.selectedIntersection;
@@ -89,6 +89,18 @@ class NotePanel extends Component {
         };
         document.addEventListener('mousemove', cast onMove);
         document.addEventListener('mouseup', cast onUp);
+
+    }
+
+    /** A concept against itself is titled with its name alone. In symmetric
+        mode a pair has no direction: the upper concept comes first, joined
+        with a +. */
+    function titleOf(row:Concept, col:Concept):String {
+
+        final matrix = model.matrix;
+        if (row == col) return row.name;
+        if (!matrix.symmetric) return row.name + ' → ' + col.name;
+        return matrix.isLower(row, col) ? col.name + ' + ' + row.name : row.name + ' + ' + col.name;
 
     }
 
