@@ -31,6 +31,8 @@ class MatrixTable extends Component {
         // -1 when nothing is selected.
         final selectedRow = concepts.indexOf(model.matrix.selectedRow);
         final selectedCol = concepts.indexOf(model.matrix.selectedCol);
+        final hoveredRow = concepts.indexOf(model.matrix.hoveredRow);
+        final hoveredCol = concepts.indexOf(model.matrix.hoveredCol);
 
         return '<>
             <table class="matrix-table group/matrix" style=${{ marginRight: overhang }}>
@@ -39,8 +41,8 @@ class MatrixTable extends Component {
                     <td class="p-0"></td>
                     <foreach ${concepts} ${(_:Int, concept:Concept) -> '<>
                         <th class="matrix-head" style=${{ height: headHeight }}>
-                            <div class=${model.matrix.selectedCol == concept ? "matrix-slant-selected" : "matrix-slant"}></div>
-                            <div class=${model.matrix.selectedCol == concept ? "matrix-label-selected" : "matrix-label"}
+                            <div class=${isSelectedCol(concept) ? "matrix-slant-selected" : "matrix-slant"}></div>
+                            <div class=${isSelectedCol(concept) ? "matrix-label-selected" : "matrix-label"}
                                  style=${{ maxWidth: labelMaxWidth }} title=${concept.name}>${concept.name}</div>
                         </th>
                     '} />
@@ -62,7 +64,7 @@ class MatrixTable extends Component {
                             </div>
                         </td>
                         <th class=${rowheadClass(row, concept)} title=${concept.name}>
-                            <input class=${model.matrix.selectedRow == concept ? "matrix-name-selected" : "matrix-name"}
+                            <input class=${isSelectedRow(concept) ? "matrix-name-selected" : "matrix-name"}
                                    style=${{ width: nameWidth }} data-concept=${row}
                                    value=${concept.name} aria-label="Concept name"
                                    onclick=${(e) -> selectDefaultName(concept, e)}
@@ -71,7 +73,10 @@ class MatrixTable extends Component {
                                    onblur=${(_) -> removeIfEmpty(concept)} />
                         </th>
                         <foreach ${concepts} ${(col:Int, other:Concept) -> '<>
-                            <td class=${cellClass(row, col, selectedRow, selectedCol)} style=${cellStyle(concept, other)}
+                            <td class=${cellClass(row, col, selectedRow, selectedCol, hoveredRow, hoveredCol)}
+                                style=${cellStyle(concept, other)}
+                                onmouseenter=${(_) -> hover(concept, other)}
+                                onmouseleave=${(_) -> unhover(concept, other)}
                                 onclick=${(_) -> toggle(concept, other)}></td>
                         '} />
                     </tr>
@@ -94,34 +99,75 @@ class MatrixTable extends Component {
         text. The diagonal is a concept against itself: hatched, and selectable
         like the other cells.
 
-        The path from each header to the selected cell is lightly highlighted:
-        on its row the cells left of it, on its column the cells above it,
-        nothing past the crossing.
-
-        In symmetric mode the other cell of the selected pair is outlined too,
-        since it shows the same notes. The highlighted path stays the one of
-        the cell clicked. */
-    function cellClass(row:Int, col:Int, selectedRow:Int, selectedCol:Int):String {
+        While a cell is selected, every other cell is dimmed, so it stands out.
+        In symmetric mode the other cell of the selected pair stays lit and
+        outlined too, since it shows the same notes, and the other cell of the
+        hovered one lights up like it. The diagonal is its own pair. */
+    function cellClass(row:Int, col:Int, selectedRow:Int, selectedCol:Int, hoveredRow:Int, hoveredCol:Int):String {
 
         final selected = (row == selectedRow && col == selectedCol)
             || (model.matrix.symmetric && row == selectedCol && col == selectedRow);
-        final cross = (row == selectedRow && col < selectedCol) || (col == selectedCol && row < selectedRow);
+        final mirrorHovered = row == hoveredCol && col == hoveredRow;
+        final dim = selectedRow != -1 && !selected;
 
         if (row == col) {
             if (selected) return row == 0 ? "matrix-self matrix-selected border-t" : "matrix-self matrix-selected";
-            if (cross) return row == 0 ? "matrix-self matrix-cross border-t" : "matrix-self matrix-cross";
+            if (dim) return row == 0 ? "matrix-self matrix-dim border-t" : "matrix-self matrix-dim";
             return row == 0 ? "matrix-self border-t" : "matrix-self";
         }
+        if (selected && mirrorHovered) {
+            return row == 0 ? "matrix-cell matrix-selected matrix-hovered border-t" : "matrix-cell matrix-selected matrix-hovered";
+        }
         if (selected) return row == 0 ? "matrix-cell matrix-selected border-t" : "matrix-cell matrix-selected";
-        if (cross) return row == 0 ? "matrix-cell matrix-cross border-t" : "matrix-cell matrix-cross";
+        // Lit rather than dimmed, like the hovered cell itself.
+        if (mirrorHovered) return row == 0 ? "matrix-cell matrix-hovered border-t" : "matrix-cell matrix-hovered";
+        if (dim) return row == 0 ? "matrix-cell matrix-dim border-t" : "matrix-cell matrix-dim";
         return row == 0 ? "matrix-cell border-t" : "matrix-cell";
+
+    }
+
+    /** Tracked in symmetric mode only: elsewhere CSS hover is enough, and
+        nothing re-renders as the mouse moves. */
+    function hover(rowConcept:Concept, colConcept:Concept):Void {
+
+        final matrix = model.matrix;
+        if (!matrix.symmetric || rowConcept == colConcept) return;
+        matrix.hoveredRow = rowConcept;
+        matrix.hoveredCol = colConcept;
+
+    }
+
+    function unhover(rowConcept:Concept, colConcept:Concept):Void {
+
+        final matrix = model.matrix;
+        if (matrix.hoveredRow != rowConcept || matrix.hoveredCol != colConcept) return;
+        matrix.hoveredRow = null;
+        matrix.hoveredCol = null;
+
+    }
+
+    /** Whether the header of `concept` is highlighted as a row of the
+        selection. In symmetric mode a pair has no direction, so the two
+        concepts of the selected pair are highlighted both as rows and as
+        columns. */
+    function isSelectedRow(concept:Concept):Bool {
+
+        final matrix = model.matrix;
+        return matrix.selectedRow == concept || (matrix.symmetric && matrix.selectedCol == concept);
+
+    }
+
+    function isSelectedCol(concept:Concept):Bool {
+
+        final matrix = model.matrix;
+        return matrix.selectedCol == concept || (matrix.symmetric && matrix.selectedRow == concept);
 
     }
 
     /** The row header, highlighted while its row holds the selected cell. */
     function rowheadClass(row:Int, concept:Concept):String {
 
-        if (model.matrix.selectedRow == concept) {
+        if (isSelectedRow(concept)) {
             return row == 0 ? "matrix-rowhead-selected border-t" : "matrix-rowhead-selected";
         }
         return row == 0 ? "matrix-rowhead border-t" : "matrix-rowhead";

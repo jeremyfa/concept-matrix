@@ -167,11 +167,17 @@
     @apply outline-2 outline-t-text/30 -outline-offset-2;
 }
 
-/* The row and column of the selected cell: a lighter version of the hover
-   layer. A cell's colours use its background image, so this is a shadow too;
-   hovering a cell of the cross shows the stronger hover layer instead. */
-@utility matrix-cross {
-    @apply shadow-[inset_0_0_0_40px_color-mix(in_srgb,var(--t-text)_6%,transparent)];
+/* The other cell of the hovered one in symmetric mode: the hover layer,
+   set from MatrixTable since CSS only knows the cell under the mouse. */
+@utility matrix-hovered {
+    @apply shadow-[inset_0_0_0_40px_color-mix(in_srgb,var(--t-text)_10%,transparent)];
+}
+
+/* Every other cell while one is selected: veiled with the page background,
+   so the selection stands out. A shadow like the hover layer, so hovering a
+   dimmed cell still lights it up. */
+@utility matrix-dim {
+    @apply shadow-[inset_0_0_0_40px_color-mix(in_srgb,var(--t-background)_45%,transparent)];
 }
 
 /* A concept against itself: hatched, and open to notes like any other cell,

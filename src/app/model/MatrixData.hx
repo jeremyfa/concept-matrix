@@ -22,6 +22,12 @@ class MatrixData extends BaseModel {
 
     @observe public var selectedCol:Concept = null;
 
+    /** The cell under the mouse, in symmetric mode only, so the other cell of
+        its pair lights up with it. Not saved either. */
+    @observe public var hoveredRow:Concept = null;
+
+    @observe public var hoveredCol:Concept = null;
+
     /** The note whose colour picker is open, if any. Not saved either. */
     @observe public var colorPickerNote:Note = null;
 
