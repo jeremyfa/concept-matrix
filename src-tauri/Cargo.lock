@@ -519,7 +519,7 @@ dependencies = [
 
 [[package]]
 name = "concept-matrix"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "tauri",
  "tauri-build",
