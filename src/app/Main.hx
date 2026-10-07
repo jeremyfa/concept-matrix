@@ -51,6 +51,8 @@ class Main implements X {
                 if (model.document == null) model.document = new DocumentState();
                 if (model.ui == null) model.ui = new UIState();
                 model.document.watch(model.matrix);
+                // Checks the file at once, then each time the window comes back.
+                DocumentActions.watchFile();
             },
             // Escape closes an open colour picker first, then the notes panel.
             onEscape: () -> {

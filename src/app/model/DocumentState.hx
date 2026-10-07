@@ -21,6 +21,11 @@ class DocumentState extends BaseModel {
 
     @serialize public var unsaved:Bool = false;
 
+    /** What the file held when it was last opened or saved, as a hash: how
+        ExternalChanges tells that another program changed it, even while the
+        app was closed. */
+    @serialize public var diskHash:String = null;
+
     /** The models currently watched for changes. Not saved. */
     var watched:Array<Model> = [];
 

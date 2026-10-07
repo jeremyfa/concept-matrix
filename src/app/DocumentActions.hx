@@ -4,6 +4,7 @@ import app.model.MatrixData;
 import app.utils.MatrixJson;
 import js.html.KeyboardEvent;
 import kit.platform.FileFilter;
+import kit.platform.ExternalChanges;
 import kit.platform.FileRef;
 
 /** New, Open and Save: what the title bar buttons and shortcuts do. */
@@ -18,7 +19,7 @@ class DocumentActions {
         confirmDiscard(() -> {
             final matrix = new MatrixData();
             matrix.add(matrix.defaultName());
-            replace(matrix, null);
+            replace(matrix, null, null);
         });
 
     }
@@ -42,8 +43,40 @@ class DocumentActions {
                     Dialog.alert('Could not open file', Std.string(message));
                     return;
                 }
-                replace(matrix, file.ref);
+                replace(matrix, file.ref, file.content);
             });
+        });
+
+    }
+
+    /**
+     * Replaces the matrix with `content`, read again from its file after
+     * another program changed it. ExternalChanges asked first.
+     */
+    public static function reload(content:String):Void {
+
+        var matrix:MatrixData = null;
+        try {
+            matrix = MatrixJson.read(content);
+        }
+        catch (message:Dynamic) {
+            Dialog.alert('Could not reload file', Std.string(message));
+            return;
+        }
+        replace(matrix, model.document.ref(), content);
+
+    }
+
+    /** Offers to reload the file when another program changes it. Desktop only. */
+    public static function watchFile():Void {
+
+        final document = model.document;
+        ExternalChanges.watch({
+            file: () -> document.ref(),
+            known: () -> document.diskHash,
+            setKnown: hash -> document.diskHash = hash,
+            unsaved: () -> document.unsaved,
+            reload: content -> reload(content)
         });
 
     }
@@ -68,6 +101,8 @@ class DocumentActions {
             if (saved == null) return;
             document.setFile(saved);
             document.unsaved = false;
+            // What the disk holds now: not a change from outside.
+            document.diskHash = ExternalChanges.hash(content);
         };
 
         if (!forceSaveAs && ref != null && ref.isWritableInPlace()) {
@@ -119,14 +154,16 @@ class DocumentActions {
 
     }
 
-    /** Makes `matrix` the current one, belonging to `ref` (null for none). */
-    static function replace(matrix:MatrixData, ref:FileRef):Void {
+    /** Makes `matrix` the current one, read from `content` of the file `ref`
+        (both null for a new matrix). */
+    static function replace(matrix:MatrixData, ref:FileRef, content:String):Void {
 
         final document = model.document;
         model.matrix.clearSelection();
         model.matrix = matrix;
         document.setFile(ref);
         document.unsaved = false;
+        document.diskHash = content != null ? ExternalChanges.hash(content) : null;
         document.watch(matrix);
 
     }
